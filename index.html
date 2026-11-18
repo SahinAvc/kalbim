@@ -1,0 +1,585 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Kalbimin Işıkları</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Jost:wght@300;400&display=swap">
+<style>
+/* Düzen: tam ekran WebGL sahnesi + altta yazı alanı. Tek koyu görünüm (bilinçli). */
+:root{
+  --bg:#050207; --ink:#ffe6f2; --glow:#ff4fa3; --deep:#c2185b; --violet:#7b2cbf;
+  --soft:rgba(255,205,230,.78);
+  --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --sans:'Jost','Helvetica Neue',Arial,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;font-family:var(--sans)}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+#wash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen;
+  background:radial-gradient(ellipse 80% 65% at 50% 44%,rgba(255,70,170,.34),rgba(150,30,160,.16) 45%,transparent 72%)}
+.ui{position:fixed;inset:0;box-sizing:border-box;pointer-events:none;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.top{flex:1;display:grid;place-items:center;min-height:0}
+.bottom{position:relative;height:30vh;min-height:150px}
+.intro{margin:0;text-align:center;max-width:16em;font:italic 500 clamp(1.75rem,6.6vw,3.2rem)/1.3 var(--serif);
+  color:var(--ink);text-wrap:balance;opacity:0;filter:blur(14px);letter-spacing:.2em;
+  text-shadow:0 0 16px rgba(255,79,163,.8),0 0 44px rgba(194,24,91,.6),0 0 90px rgba(123,44,191,.4);
+  animation:reveal 4s cubic-bezier(.2,.7,.2,1) .8s forwards,breathe 5.5s ease-in-out 5s infinite;
+  transition:opacity 1.6s ease,filter 1.6s ease}
+.intro.gone{animation:none;opacity:0;filter:blur(18px)}
+@keyframes reveal{to{opacity:1;filter:blur(0);letter-spacing:.02em}}
+@keyframes breathe{0%,100%{text-shadow:0 0 16px rgba(255,79,163,.8),0 0 44px rgba(194,24,91,.6),0 0 90px rgba(123,44,191,.4)}
+  50%{text-shadow:0 0 26px rgba(255,110,190,1),0 0 66px rgba(220,40,120,.8),0 0 120px rgba(123,44,191,.55)}}
+.hint{position:absolute;left:0;right:0;bottom:calc(5vh + 4px);margin:0;text-align:center;
+  font:300 clamp(.9rem,2.8vw,1.1rem)/1.4 var(--sans);letter-spacing:.14em;color:var(--soft);
+  opacity:0;transition:opacity 1.6s ease;text-shadow:0 0 14px rgba(255,79,163,.7)}
+.hint.show{opacity:.9;animation:pulse 2.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.95}}
+.final{position:absolute;left:0;right:0;bottom:calc(5vh + 4px);text-align:center;display:flex;flex-direction:column;align-items:center;gap:.9rem}
+.final>*{margin:0;opacity:0;filter:blur(10px);transform:translateY(12px);
+  transition:opacity 2.6s ease,filter 2.6s ease,transform 2.6s ease}
+.final>.show{opacity:1;filter:blur(0);transform:none}
+#finalTitle{font:italic 600 clamp(2rem,7.2vw,3.6rem)/1.15 var(--serif);color:#fff0f7;text-wrap:balance;
+  text-shadow:0 0 18px rgba(255,60,140,.9),0 0 52px rgba(255,20,90,.6)}
+#finalSub{font:300 clamp(.9rem,2.7vw,1.2rem)/1.5 var(--sans);letter-spacing:.06em;color:var(--soft);max-width:30em;text-wrap:balance;
+  text-shadow:0 0 14px rgba(255,79,163,.6)}
+#finalCustom{font:italic 500 clamp(1.1rem,3.6vw,1.6rem)/1.4 var(--serif);color:var(--ink);max-width:26em;text-wrap:balance;
+  text-shadow:0 0 14px rgba(255,79,163,.6)}
+#finalCustom:empty{display:none}
+#nogl{position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;background:var(--bg);color:var(--ink);
+  font:italic 500 1.4rem/1.4 var(--serif)}
+@media (prefers-reduced-motion:reduce){.intro{animation:reveal 4s ease .8s forwards}.hint.show{animation:none}}
+</style>
+
+<canvas id="gl" aria-label="Romantik 3D sürpriz"></canvas>
+<div id="wash"></div>
+<main class="ui">
+  <div class="top"><h1 class="intro" id="intro"></h1></div>
+  <div class="bottom">
+    <p class="hint" id="hint"></p>
+    <section class="final" id="final">
+      <h2 id="finalTitle"></h2>
+      <p id="finalSub"></p>
+      <p id="finalCustom"></p>
+    </section>
+  </div>
+</main>
+<div id="nogl" hidden>Bu cihaz WebGL desteklemiyor.<br>Sürpriz için başka bir tarayıcıyla dene ♡</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   AYARLAR: sevgiline özel metinleri buradan değiştir.
+   ============================================================ */
+const CONFIG = {
+  intro: "Senin için küçük bir sürprizim var Gülüm...",
+  hint1: "Başlamak için ekrana dokun ♡",
+  hint2: "Devam etmek için tekrar dokun ♡",
+  finalTitle: "İyi ki varsın sevgilim. ♡",
+  finalSub: "Bu küçük ışıkların her biri sana olan sevgimden bir parça...",
+  customMessage: "Sen hayatıma dokunduğundan beri, en karanlık geceler bile içimde çiçek açıyor."   // İstersen buraya kişisel bir mesaj yaz (örn. "Seninle her gün bir bayram. — Ali")
+};
+
+(function () {
+'use strict';
+const $ = id => document.getElementById(id);
+$('intro').textContent = CONFIG.intro;
+$('hint').textContent = CONFIG.hint1;
+$('finalTitle').textContent = CONFIG.finalTitle;
+$('finalSub').textContent = CONFIG.finalSub;
+$('finalCustom').textContent = CONFIG.customMessage;
+
+/* ---------- Yardımcılar ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x+2, 3)/2;
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const lerp = (a,b,t) => a + (b-a)*t;
+
+/* ---------- Kalite seviyeleri (cihaza göre) ---------- */
+const isMobile = matchMedia('(pointer:coarse)').matches || Math.min(innerWidth, innerHeight) < 600;
+const Q = {
+  heart:   isMobile ? 7500 : 18000,
+  petals:  isMobile ? 340 : 560,
+  florets: isMobile ? 150 : 260,
+  stars:   isMobile ? 700 : 1500,
+  dust:    isMobile ? 120 : 260,
+  orbit:   isMobile ? 260 : 520,
+  sparks:  isMobile ? 220 : 380,
+  pr:      Math.min(window.devicePixelRatio || 1, isMobile ? 1.6 : 2)
+};
+
+/* ---------- Renderer / sahne ---------- */
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({canvas: $('gl'), antialias: !isMobile, powerPreference: 'high-performance'});
+} catch (e) { $('nogl').hidden = false; return; }
+renderer.setClearColor(0x050207, 1);
+let pr = Q.pr;
+renderer.setPixelRatio(pr);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
+const timeUniform = {value: 0};
+const ADD = THREE.AdditiveBlending;
+
+/* ---------- Arka plan: yıldızlar ve toz ---------- */
+const pxU = {value: 1};
+function makeStars(n, dust) {
+  const rnd = mulberry32(dust ? 11 : 5);
+  const pos = new Float32Array(n*3), seed = new Float32Array(n), size = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    if (dust) { pos[i*3] = (rnd()-.5)*90; pos[i*3+1] = (rnd()-.5)*50; pos[i*3+2] = -12 + rnd()*40; }
+    else {
+      const u = rnd()*2-1, a = rnd()*Math.PI*2, r = 90 + rnd()*110, s = Math.sqrt(1-u*u);
+      pos[i*3] = r*s*Math.cos(a); pos[i*3+1] = r*u; pos[i*3+2] = -Math.abs(r*s*Math.sin(a)) - 20;
+    }
+    seed[i] = rnd(); size[i] = dust ? 2 + rnd()*5 : 1 + rnd()*2.4;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: {uTime: timeUniform, uPx: pxU, uDust: {value: dust ? 1 : 0}},
+    vertexShader: `
+      attribute float aSeed; attribute float aSize; uniform float uTime, uPx, uDust; varying float vA; varying vec3 vC;
+      void main(){
+        vec3 p = position;
+        if(uDust > .5){ p.y = mod(p.y + uTime*(.25+aSeed*.6) + 25., 50.) - 25.; p.x += sin(uTime*.3+aSeed*30.)*1.6; }
+        vec4 mv = modelViewMatrix*vec4(p,1.); gl_Position = projectionMatrix*mv;
+        float tw = .55+.45*sin(uTime*(.6+aSeed*1.8)+aSeed*40.);
+        vA = tw*(.3+.7*aSeed)*(uDust>.5 ? .55 : 1.);
+        float att = uDust>.5 ? min(60./-mv.z, 2.5) : 1.;
+        gl_PointSize = aSize*uPx*att*(.7+.5*tw);
+        vC = mix(vec3(1.,.72,.9), vec3(.72,.58,1.), fract(aSeed*7.3));
+      }`,
+    fragmentShader: `
+      varying float vA; varying vec3 vC;
+      void main(){ float d = length(gl_PointCoord-.5); float a = smoothstep(.5,0.,d); a*=a; gl_FragColor = vec4(vC, a*vA); }`,
+    transparent: true, depthWrite: false, blending: ADD
+  });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; return p;
+}
+const stars = makeStars(Q.stars, false), dust = makeStars(Q.dust, true);
+scene.add(stars, dust);
+
+/* ---------- Kasım patısı (prosedürel, katman katman) ---------- */
+const lights = new THREE.Group();
+lights.add(new THREE.AmbientLight(0x7a4a6e, 1.3));
+const dl = new THREE.DirectionalLight(0xffffff, 1.1); dl.position.set(3, 6, 5); lights.add(dl);
+const pl = new THREE.PointLight(0xff5fb0, 1.6, 30); pl.position.set(0, 3, 4); lights.add(pl);
+scene.add(lights);
+
+const PETAL_VS = `
+  attribute float aYaw, aPitch, aLen, aWid, aRand, aLayer;
+  uniform float uBloom, uTime, uDissolve, uSize;
+  varying float vT, vU, vRand, vLayer; varying vec3 vN, vV;
+  void main(){
+    float u = position.x, t = position.y;
+    float delay = (1.-aLayer)*.45;
+    float b = clamp((uBloom-delay)/.55, 0., 1.); b = b*b*(3.-2.*b);
+    float pitch = mix(.05+aLayer*.06, aPitch, b);
+    float c = (aLayer-.45)*.9*mix(.3,1.,b);
+    if(abs(c) < .02) c = c < 0. ? -.02 : .02;
+    float L = aLen*mix(.55,1.,b);
+    float a = pitch + c*t;
+    float rr = L/c*(cos(pitch)-cos(a));
+    float hh = L/c*(sin(a)-sin(pitch));
+    float wp = (smoothstep(0.,.12,t)*.55+.45) * sqrt(max(1.-pow(t,5.),0.)) * (1.+.35*sin(t*3.14159));
+    float w = u*aWid*wp;
+    float cup = u*u*aWid*.38*(1.-t*.5);
+    float r0 = .22*uSize*b + .02;
+    float lift = (1.-aLayer)*.30*uSize*b;
+    vec3 rad = vec3(cos(aYaw),0.,sin(aYaw)), tn = vec3(-sin(aYaw),0.,cos(aYaw));
+    vec3 p = rad*(rr + r0 - cos(a)*cup) + vec3(0., hh + lift + sin(a)*cup, 0.) + tn*w;
+    p.y += sin(uTime*1.3 + aRand*30. + t*2.)*.025*t*b;
+    p += (rad*.6 + vec3(0.,1.,0.))*uDissolve*uDissolve*aRand*t*2.2;
+    vec3 nUp = normalize(-cos(a)*rad + sin(a)*vec3(0.,1.,0.) - tn*u*.5);
+    vN = normalMatrix*nUp;
+    vec4 mv = modelViewMatrix*vec4(p,1.);
+    vV = -mv.xyz; vT = t; vU = u; vRand = aRand; vLayer = aLayer;
+    gl_Position = projectionMatrix*mv;
+  }`;
+const PETAL_FS = `
+  uniform vec3 uBase, uMid, uTip; uniform float uDissolve;
+  varying float vT, vU, vRand, vLayer; varying vec3 vN, vV;
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+  void main(){
+    float d = uDissolve*1.5 - (vRand*.3 + (1.-vT)*.55 + hash(vec2(vU*3.+vRand*10., vT*40.))*.15);
+    if(d > 0.) discard;
+    vec3 n = normalize(vN), V = normalize(vV);
+    if(dot(n,V) < 0.) n = -n;
+    vec3 col = mix(uBase, uMid, smoothstep(0.,.45,vT));
+    col = mix(col, uTip, smoothstep(.4,1.,vT)*(.75+.25*vRand));
+    col *= .82 + .3*vRand;
+    col *= 1. - .2*smoothstep(.3,0.,abs(vU));
+    col *= .93 + .07*sin(vU*22. + vRand*6.);
+    vec3 Ld = normalize(vec3(.35,.75,.55));
+    float dif = .3 + .7*(dot(n,Ld)*.5+.5);
+    float spec = pow(max(dot(reflect(-Ld,n),V),0.), 24.)*.22;
+    float fres = pow(1.-max(dot(n,V),0.), 3.);
+    float ao = mix(.22,1.,smoothstep(0.,.6,vT)) * (.72+.28*vLayer);
+    col = col*dif*ao + uTip*fres*.28 + uMid*.2*smoothstep(.5,1.,vT) + vec3(1.,.8,.92)*spec;
+    if(d > -.1) col = mix(col, vec3(1.,.4,.75)*2.2, smoothstep(-.1,0.,d));
+    gl_FragColor = vec4(pow(col, vec3(.92)), 1.);
+  }`;
+
+const flowerMats = [], flowers = [];
+function makeFlower(o) {
+  const rnd = mulberry32(o.seed), SEG = 10, ACR = 4;
+  const pos = new Float32Array((SEG+1)*(ACR+1)*3), idx = [];
+  for (let i = 0; i <= SEG; i++) for (let j = 0; j <= ACR; j++) {
+    const k = (i*(ACR+1)+j)*3; pos[k] = j/ACR*2-1; pos[k+1] = i/SEG;
+  }
+  for (let i = 0; i < SEG; i++) for (let j = 0; j < ACR; j++) {
+    const a = i*(ACR+1)+j, b = a+1, c = a+ACR+1, d = c+1; idx.push(a,b,c, b,d,c);
+  }
+  const g = new THREE.InstancedBufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setIndex(idx);
+  const n = o.petals, A = {yaw:0,pitch:0,len:0,wid:0,rand:0,layer:0};
+  for (const k in A) A[k] = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const layer = 1 - Math.pow(i/(n-1), .85);
+    A.layer[i] = layer;
+    A.yaw[i] = i*2.39996323 + rnd()*.05;
+    A.pitch[i] = .9 + .55*Math.pow(layer,.9) + (rnd()-.5)*.14;
+    A.len[i] = (.95 + 2.15*Math.pow(layer,.8))*o.size*(.9+.2*rnd());
+    A.wid[i] = (.17 + .09*layer)*o.size*(.85+.3*rnd());
+    A.rand[i] = rnd();
+  }
+  const names = {yaw:'aYaw',pitch:'aPitch',len:'aLen',wid:'aWid',rand:'aRand',layer:'aLayer'};
+  for (const k in A) g.setAttribute(names[k], new THREE.InstancedBufferAttribute(A[k], 1));
+  g.instanceCount = n;
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {uBloom:{value:0}, uTime:timeUniform, uDissolve:{value:0}, uSize:{value:o.size},
+      uBase:{value:new THREE.Color(o.cols[0])}, uMid:{value:new THREE.Color(o.cols[1])}, uTip:{value:new THREE.Color(o.cols[2])}},
+    vertexShader: PETAL_VS, fragmentShader: PETAL_FS, side: THREE.DoubleSide
+  });
+  const petals = new THREE.Mesh(g, mat); petals.frustumCulled = false;
+  const grp = new THREE.Group(); grp.add(petals);
+
+  // Sarı, detaylı çiçek merkezi (Fibonacci dizilimli küçük çiçekçikler)
+  const fn = o.florets, R = .3*o.size;
+  const fg = new THREE.SphereGeometry(.036*o.size, 6, 5);
+  const fm = new THREE.MeshStandardMaterial({color:0xffffff, roughness:.5, emissive:0x663300, emissiveIntensity:.7});
+  const center = new THREE.InstancedMesh(fg, fm, fn), dm = new THREE.Object3D(), cc = new THREE.Color();
+  for (let i = 0; i < fn; i++) {
+    const r = R*Math.sqrt((i+.5)/fn), a = i*2.39996323, k = r/R;
+    dm.position.set(Math.cos(a)*r, o.size*(.10*(1-k*k)+.02+(rnd()-.5)*.01), Math.sin(a)*r);
+    dm.scale.setScalar(.8 + rnd()*.5 + (1-k)*.3); dm.updateMatrix(); center.setMatrixAt(i, dm.matrix);
+    cc.setHSL(.115 - k*.045 + (rnd()-.5)*.012, 1, .52 - k*.06); center.setColorAt(i, cc);
+  }
+  center.instanceMatrix.needsUpdate = true;
+  center.frustumCulled = false; grp.add(center);
+
+  // Sap
+  const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0,-.02,0), new THREE.Vector3(.3,-3,-.6), new THREE.Vector3(-.2,-7,.4), new THREE.Vector3(0,-13,0)]);
+  const stemMat = new THREE.MeshStandardMaterial({color:0x1d5a2c, roughness:.85});
+  const stem = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, .07*o.size, 6), stemMat);
+  grp.add(stem);
+
+  const spinRig = new THREE.Group(); spinRig.add(grp);
+  grp.rotation.x = o.tilt;
+  const f = {rig: spinRig, grp, mat, petals, center, stem, delay: o.delay, spin: o.spin, geos: [g, fg, stem.geometry], mats: [mat, fm, stemMat]};
+  flowers.push(f); flowerMats.push(mat); return f;
+}
+const rig = new THREE.Group(); scene.add(rig);
+const FL = [
+  makeFlower({seed:3, petals:Q.petals, florets:Q.florets, size:1, tilt:.95, delay:0, spin:.12, cols:[0x4a0a45,0xc2188a,0xff80c8]}),
+  makeFlower({seed:9, petals:Math.floor(Q.petals*.6), florets:Math.floor(Q.florets*.6), size:.72, tilt:.8, delay:.8, spin:-.09, cols:[0x25094f,0x7a2bd0,0xd59bff]}),
+  makeFlower({seed:21, petals:Math.floor(Q.petals*.6), florets:Math.floor(Q.florets*.6), size:.68, tilt:1.05, delay:1.3, spin:.1, cols:[0x45062d,0xe0207a,0xff9ac2]})
+];
+FL.forEach(f => rig.add(f.rig));
+
+/* ---------- Parıltılar (çiçeğin etrafında uçuşan ışıklar) ---------- */
+function makeSparks(n) {
+  const rnd = mulberry32(31), seed = new Float32Array(n), pos = new Float32Array(n*3);
+  for (let i = 0; i < n; i++) seed[i] = rnd();
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: {uTime: timeUniform, uBurst:{value:0}, uA:{value:0}, uPx: pxU},
+    vertexShader: `
+      attribute float aSeed; uniform float uTime, uBurst, uA, uPx; varying vec3 vC; varying float vA;
+      void main(){
+        float s = aSeed;
+        float dirn = fract(s*7.) > .5 ? 1. : -1.;
+        float ang = s*18.85 + uTime*(.12+fract(s*13.)*.25)*dirn;
+        float R = 1.6 + fract(s*91.)*5.5;
+        float eb = 1. - pow(1.-uBurst, 3.);
+        vec3 p = vec3(cos(ang)*R, (fract(s*37.)-.5)*5. + sin(uTime*.7+s*20.)*.4, sin(ang)*R*.7 - 1.)*eb;
+        p.y += .3;
+        vec4 mv = modelViewMatrix*vec4(p,1.); gl_Position = projectionMatrix*mv;
+        vC = mix(vec3(1.,.35,.75), vec3(.65,.4,1.), fract(s*5.));
+        vA = uA*(.35+.65*pow(.5+.5*sin(uTime*(1.+s*3.)+s*50.), 3.));
+        gl_PointSize = (2.+fract(s*17.)*5.)*uPx*(1.+(1.-eb)*2.);
+      }`,
+    fragmentShader: `varying vec3 vC; varying float vA;
+      void main(){ float d = length(gl_PointCoord-.5); if(d>.5) discard; float k = exp(-d*d*30.)+exp(-d*d*8.)*.3; gl_FragColor = vec4(vC*k, vA); }`,
+    transparent: true, depthWrite: false, blending: ADD
+  });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; return p;
+}
+const sparks = makeSparks(Q.sparks); scene.add(sparks);
+
+/* ---------- Işık parçacıklarından 3D kalp ---------- */
+const heartGroup = new THREE.Group(); scene.add(heartGroup);
+const SHIFT = 2.5;
+const hx = t => 16*Math.pow(Math.sin(t), 3);
+const hy = t => 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t);
+const zmax = s => 6.8*Math.sqrt(Math.max(0, 1 - s*s));
+const heartU = {uForm:{value:0}, uTime:timeUniform, uBeat:{value:0}, uPx:pxU, uAlpha:{value:1}, uShine:{value:0}, uRef:{value:55}};
+
+function buildHeart(N) {
+  const rnd = mulberry32(7), TAU = Math.PI*2;
+  const pos = new Float32Array(N*3), st = new Float32Array(N*3);
+  const form = new Float32Array(N), size = new Float32Array(N), seed = new Float32Array(N), kind = new Float32Array(N);
+  const nOut = Math.floor(N*.12), nVol = Math.floor(N*.18), th = .95, ct = Math.cos(th), sn = Math.sin(th);
+  for (let i = 0; i < N; i++) {
+    const t = rnd()*TAU; let s, z, k = 0, f, sz;
+    if (i < nOut) { k = 1; s = 1; z = (rnd()-.5)*1.4; const q = (((t-Math.PI)/TAU)+1)%1; f = .42 + q*.5 + rnd()*.01; sz = 2.6 + rnd()*1.6; }
+    else {
+      s = Math.sqrt(rnd());
+      if (i < nOut+nVol) { s *= .97; z = (rnd()*2-1)*zmax(s); sz = 1 + rnd()*1.6; f = s*.5 + t/TAU*.1 + rnd()*.05 + .04; }
+      else { z = (rnd() < .5 ? -1 : 1)*zmax(s)*(.9+.1*rnd()); sz = 1.4 + rnd()*2.2; f = s*.5 + t/TAU*.1 + rnd()*.05; }
+    }
+    const j = k ? .12 : .3;
+    pos[i*3] = s*hx(t) + (rnd()-.5)*j*2;
+    pos[i*3+1] = s*hy(t) + SHIFT + (rnd()-.5)*j*2;
+    pos[i*3+2] = z + (rnd()-.5)*j*2;
+    // Başlangıç: eğik duran çiçek şeklinde bir küme
+    const a = rnd()*TAU, r = 3.3*Math.sqrt(rnd()), x0 = Math.cos(a)*r, y0 = (rnd()-.5)*1.2, z0 = Math.sin(a)*r;
+    st[i*3] = x0; st[i*3+1] = y0*ct - z0*sn; st[i*3+2] = y0*sn + z0*ct;
+    form[i] = f; size[i] = sz; seed[i] = rnd(); kind[i] = k;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aStart', new THREE.BufferAttribute(st, 3));
+  g.setAttribute('aForm', new THREE.BufferAttribute(form, 1));
+  g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+  g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  g.setAttribute('aKind', new THREE.BufferAttribute(kind, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: heartU,
+    vertexShader: `
+      attribute vec3 aStart; attribute float aForm, aSize, aSeed, aKind;
+      uniform float uForm, uTime, uBeat, uPx, uAlpha, uShine, uRef; varying vec3 vC; varying float vA;
+      float ease3(float x){ return x<.5 ? 4.*x*x*x : 1.-pow(-2.*x+2.,3.)/2.; }
+      void main(){
+        float p = clamp((uForm-aForm)/.22, 0., 1.); float e = ease3(p);
+        float born = step(.0001, p);
+        vec3 dir = position-aStart; vec3 side = normalize(cross(dir, vec3(0.,0.,1.)) + vec3(.001));
+        float arc = sin(e*3.14159)*(2.+aSeed*8.);
+        vec3 pos = mix(aStart, position, e) + side*arc + vec3(0.,arc*.4,0.)*(aSeed-.5)*2.;
+        float st = smoothstep(.85, 1., p);
+        pos += st*.32*vec3(sin(uTime*1.1+aSeed*40.), cos(uTime*.9+aSeed*23.), sin(uTime*.8+aSeed*57.));
+        pos *= 1. + uBeat*.045*st;
+        vec4 mv = modelViewMatrix*vec4(pos,1.); gl_Position = projectionMatrix*mv;
+        float z01 = clamp(pos.z/16.+.5, 0., 1.);
+        vec3 red = vec3(1.,.04,.12), pink = vec3(1.,.28,.6), hot = vec3(1.,.75,.88);
+        vec3 c = mix(red, pink, fract(aSeed*5.7)*.8 + z01*.2);
+        if(aKind > .5) c = mix(pink, hot, .55 + .3*fract(aSeed*3.1));
+        float fl = pow(max(0., sin(uTime*(.9+aSeed)+aSeed*100.)), 60.);
+        float sweep = exp(-pow((pos.x*.5+pos.y*.35+pos.z*.2) - (mod(uTime*9., 70.)-30.), 2.)*.04);
+        float since = uForm-aForm-.22; float arrive = since > 0. ? exp(-since*8.) : 0.;
+        float flight = p < 1. ? 1. : 0.;
+        float glow = .55 + .5*z01 + fl*2.2 + sweep*uShine*1.2 + arrive*2. + flight*.8;
+        vC = c*glow; vA = born*uAlpha*(.55+.45*z01);
+        gl_PointSize = born*aSize*uPx*(1.+fl*1.8+arrive*1.2+flight*.4)*min(uRef/-mv.z, 2.);
+      }`,
+    fragmentShader: `
+      varying vec3 vC; varying float vA;
+      void main(){ vec2 q = gl_PointCoord-.5; float d = length(q); if(d>.5) discard;
+        float core = exp(-d*d*38.), halo = exp(-d*d*9.)*.35; gl_FragColor = vec4(vC*(core+halo), vA); }`,
+    transparent: true, depthWrite: false, blending: ADD
+  });
+  const pts = new THREE.Points(g, m); pts.frustumCulled = false; return pts;
+}
+heartGroup.add(buildHeart(Q.heart));
+
+/* İplik / nakış çizgileri: kalbin dış hattı ve iç kontürleri */
+(function buildThreads() {
+  const contours = [[1,0],[.82,1],[.82,-1],[.6,1],[.6,-1],[.38,1],[.38,-1]], SEGS = 200, TAU = Math.PI*2;
+  const pos = [], aT = [], aOff = [];
+  contours.forEach((c, ci) => {
+    const s = c[0], sg = c[1];
+    const P = i => { const t = (((i/SEGS)*TAU) + Math.PI) % TAU; return [s*hx(t), s*hy(t)+SHIFT, sg*zmax(s)]; };
+    for (let i = 0; i < SEGS; i++) {
+      const a = P(i), b = P(i+1);
+      pos.push(a[0],a[1],a[2], b[0],b[1],b[2]); aT.push(i/SEGS, (i+1)/SEGS); aOff.push(.3+ci*.05, .3+ci*.05);
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('aT', new THREE.Float32BufferAttribute(aT, 1));
+  g.setAttribute('aOff', new THREE.Float32BufferAttribute(aOff, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: {uForm: heartU.uForm, uBeat: heartU.uBeat},
+    vertexShader: `
+      attribute float aT, aOff; uniform float uForm, uBeat; varying vec3 vC; varying float vA;
+      void main(){
+        float pr = clamp((uForm-aOff)/.5, 0., 1.);
+        float vis = step(aT, pr) * step(.0001, pr);
+        float head = exp(-(pr-aT)*14.)*vis*(pr < .999 ? 1. : 0.);
+        vC = mix(vec3(1.,.2,.45), vec3(1.,.85,.95), head);
+        vA = vis*(.2 + .75*head);
+        vec3 p = position*(1.+uBeat*.045);
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(p,1.);
+      }`,
+    fragmentShader: `varying vec3 vC; varying float vA; void main(){ gl_FragColor = vec4(vC, vA); }`,
+    transparent: true, depthWrite: false, blending: ADD
+  });
+  const l = new THREE.LineSegments(g, m); l.frustumCulled = false; heartGroup.add(l);
+})();
+
+/* Kalbin etrafında dolaşan ışıklar */
+const orbitU = {uTime: timeUniform, uA: {value: 0}, uPx: pxU, uRef: heartU.uRef};
+(function () {
+  const n = Q.orbit, rnd = mulberry32(77), seed = new Float32Array(n);
+  for (let i = 0; i < n; i++) seed[i] = rnd();
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n*3), 3));
+  g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: orbitU,
+    vertexShader: `
+      attribute float aSeed; uniform float uTime, uA, uPx, uRef; varying vec3 vC; varying float vA;
+      void main(){
+        float a = aSeed*31.4 + uTime*(.12+fract(aSeed*9.)*.3);
+        float rx = 19. + fract(aSeed*53.)*11., ry = 17. + fract(aSeed*29.)*9.;
+        vec3 p = vec3(cos(a)*rx, sin(a)*ry*.8 + 1., sin(a*1.3+aSeed*6.)*7.);
+        vec4 mv = modelViewMatrix*vec4(p,1.); gl_Position = projectionMatrix*mv;
+        vC = mix(vec3(1.,.35,.65), vec3(1.,.85,.95), fract(aSeed*3.));
+        vA = uA*(.3+.7*pow(.5+.5*sin(uTime*(1.+aSeed*2.)+aSeed*60.), 3.));
+        gl_PointSize = (1.6+fract(aSeed*17.)*3.2)*uPx*min(uRef/-mv.z, 2.);
+      }`,
+    fragmentShader: `varying vec3 vC; varying float vA;
+      void main(){ float d = length(gl_PointCoord-.5); if(d>.5) discard; float k = exp(-d*d*30.)+exp(-d*d*8.)*.3; gl_FragColor = vec4(vC*k, vA); }`,
+    transparent: true, depthWrite: false, blending: ADD
+  });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; heartGroup.add(p);
+})();
+
+/* Kalbin arkasındaki geniş kırmızı ışık halesi */
+const haloU = {uA:{value:0}, uBeat: heartU.uBeat};
+const halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+  uniforms: haloU,
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader: `
+    uniform float uA, uBeat; varying vec2 vUv;
+    void main(){
+      vec2 p = (vUv-.5)*2.; float d = length(p);
+      float g1 = exp(-d*d*3.2), g2 = exp(-d*d*14.);
+      vec3 col = mix(vec3(1.,.08,.22), vec3(.72,.05,.62), smoothstep(.1,.9,d));
+      gl_FragColor = vec4(col*(g1*.5+g2*.45)*uA*(1.+.35*uBeat), 1.);
+    }`,
+  transparent: true, depthWrite: false, depthTest: false, blending: ADD
+}));
+halo.scale.set(82, 70, 1); halo.position.set(0, 0, -10); halo.renderOrder = -1; halo.visible = false;
+scene.add(halo);
+
+/* ---------- Boyut / kamera ---------- */
+let dF = 15, dH = 55, W = 1, H = 1, aspect = 1;
+function applyPx() { pxU.value = pr * Math.max(.8, Math.min(1.5, Math.min(W, H)/800)); }
+function resize() {
+  W = innerWidth; H = innerHeight; aspect = W/H;
+  renderer.setPixelRatio(pr); renderer.setSize(W, H, false);
+  camera.aspect = aspect; camera.updateProjectionMatrix();
+  dF = Math.max(15, 13/(.933*aspect));
+  dH = Math.max(55, 40/(.933*aspect));
+  heartU.uRef.value = dH;
+  const sx = Math.max(.55, Math.min(1, aspect/1.2));
+  FL[1].rig.position.set(-5.2*sx, -1.2, -3.5); FL[2].rig.position.set(5*sx, -.8, -3.2);
+  applyPx();
+}
+addEventListener('resize', resize); resize();
+
+/* ---------- Yönetmen: dokunuşlarla ilerleyen sahneler ---------- */
+let stage = 0, tap1 = 0, tap2 = 0, flowerDone = false, flowersFreed = false;
+const wash = $('wash'), hint = $('hint');
+const clock = () => performance.now()/1000;
+
+function onTap() {
+  if (stage === 0) {
+    stage = 1; tap1 = clock();
+    $('intro').classList.add('gone'); hint.classList.remove('show');
+  } else if (stage === 1 && flowerDone) {
+    stage = 2; tap2 = clock(); hint.classList.remove('show');
+  }
+}
+addEventListener('pointerdown', e => { if (e.isPrimary) onTap(); });
+addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onTap(); } });
+setTimeout(() => hint.classList.add('show'), 4200);
+
+function freeFlowers() {
+  flowersFreed = true;
+  FL.forEach(f => { rig.remove(f.rig); f.geos.forEach(g => g.dispose()); f.mats.forEach(m => m.dispose()); });
+  scene.remove(rig, lights); scene.remove(sparks); sparks.geometry.dispose(); sparks.material.dispose();
+}
+function pulse(ph) { return Math.exp(-Math.pow((ph-.06)/.07, 2)) + .6*Math.exp(-Math.pow((ph-.30)/.08, 2)); }
+
+let last = clock(), emaDt = 1/60, slowT = 0, shownTitle = false, shownSub = false, shownCustom = false;
+function frame() {
+  requestAnimationFrame(frame);
+  const t = clock(); const dt = Math.min(t - last, .05); last = t;
+  timeUniform.value = t % 10000;
+  stars.rotation.y += dt*.004; stars.rotation.x += dt*.0015;
+
+  // Uyarlanabilir kalite: akıcılık düşerse çözünürlüğü azalt
+  emaDt = lerp(emaDt, dt, .05);
+  slowT = emaDt > .026 ? slowT + dt : 0;
+  if (slowT > 1.5 && pr > .8) { pr = Math.max(.8, pr - .2); slowT = 0; resize(); }
+
+  let camZ = dF, camYk = .03;
+  if (stage >= 1 && !flowersFreed) {
+    const tf = t - tap1;
+    rig.position.y = lerp(-11, 0, easeOut(clamp01(tf/4.2)));
+    rig.rotation.y = Math.sin(tf*.25)*.12;
+    FL.forEach(f => {
+      f.mat.uniforms.uBloom.value = clamp01((tf - 1 - f.delay)/7.5);
+      f.grp.rotation.y += dt*f.spin;
+      f.grp.position.y = Math.sin(tf*.8 + f.delay*3)*.05;
+    });
+    sparks.material.uniforms.uBurst.value = clamp01((tf - 7)/2.2);
+    sparks.material.uniforms.uA.value = stage === 1 ? clamp01((tf - 7)/1.2) : sparks.material.uniforms.uA.value;
+    let washA = clamp01((tf - 5)/4)*.9;
+    if (stage === 1 && !flowerDone && tf > 9.2) { flowerDone = true; hint.textContent = CONFIG.hint2; hint.classList.add('show'); }
+    if (stage >= 2) {
+      const th = t - tap2;
+      FL.forEach(f => f.mat.uniforms.uDissolve.value = clamp01(th/2.6));
+      sparks.material.uniforms.uA.value = Math.max(0, 1 - th/1.6);
+      washA *= Math.max(0, 1 - th/3);
+      if (th > 3.2) freeFlowers();
+    }
+    wash.style.opacity = washA.toFixed(3);
+  }
+  if (stage >= 2) {
+    const th = t - tap2;
+    const dolly = ease(clamp01((th - .6)/3.9));
+    camZ = lerp(dF, dH, dolly); camYk = lerp(.03, .12, dolly);
+    const form = clamp01((th - 1.2)/9.5)*1.22, f = form/1.22;
+    heartU.uForm.value = form;
+    heartU.uShine.value = f > .9 ? 1 : 0;
+    const ph = (t % 1.15);
+    heartU.uBeat.value = f > .75 ? pulse(ph)*clamp01((f-.75)/.15) : 0;
+    heartGroup.rotation.y = Math.sin(t*.5)*.45;
+    heartGroup.rotation.x = Math.sin(t*.37)*.06;
+    orbitU.uA.value = clamp01((f - .55)/.35);
+    halo.visible = th > 1.2;
+    haloU.uA.value = .12 + .88*ease(f);
+    if (!shownTitle && th > 10.4) { shownTitle = true; $('finalTitle').classList.add('show'); }
+    if (!shownSub && th > 12.4) { shownSub = true; $('finalSub').classList.add('show'); }
+    if (!shownCustom && th > 14.6) { shownCustom = true; $('finalCustom').classList.add('show'); }
+  }
+  camera.position.set(0, -camZ*camYk, camZ);
+  camera.lookAt(0, camera.position.y, 0);
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
